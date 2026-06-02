@@ -20,6 +20,11 @@ pub fn launch_velocity(yaw: f32, power: f32, max_speed: f32) -> Vec3 {
     Vec3::new(yaw.sin() * speed, 0.0, -yaw.cos() * speed)
 }
 
+/// True when a position is outside the play rectangle (half-extents from origin).
+pub fn is_out_of_bounds(pos: Vec3, half_x: f32, half_z: f32) -> bool {
+    pos.x.abs() > half_x || pos.z.abs() > half_z
+}
+
 /// Reflect a velocity off a surface with the given (unit) normal, scaled by
 /// restitution (1.0 = perfectly bouncy, 0.0 = dead stop into the wall).
 pub fn reflect(velocity: Vec3, normal: Vec3, restitution: f32) -> Vec3 {
@@ -128,5 +133,15 @@ mod tests {
         let a = slope_acceleration(normal, 9.8);
         assert!(a.x > 0.0);
         assert!(a.length() > 0.1);
+    }
+
+    #[test]
+    fn inside_bounds_is_not_oob() {
+        assert!(!is_out_of_bounds(Vec3::new(1.0, 0.3, -2.0), 10.0, 10.0));
+    }
+
+    #[test]
+    fn outside_bounds_is_oob() {
+        assert!(is_out_of_bounds(Vec3::new(11.0, 0.3, 0.0), 10.0, 10.0));
     }
 }

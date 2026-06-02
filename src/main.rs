@@ -6,9 +6,9 @@ mod input;
 mod physics;
 mod state;
 mod ui;
-use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall};
-use physics::{integrate, is_at_rest, is_in_hole, reflect, slope_acceleration};
-use state::{AimState, GameState, Strokes};
+use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall, Water};
+use physics::{integrate, is_at_rest, is_in_hole, is_out_of_bounds, reflect, slope_acceleration};
+use state::{AimState, GameState, LastRest, Strokes};
 
 fn main() {
     App::new()
@@ -16,6 +16,7 @@ fn main() {
         .init_state::<GameState>()
         .init_resource::<AimState>()
         .init_resource::<Strokes>()
+        .init_resource::<LastRest>()
         .add_systems(Startup, setup)
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
@@ -23,6 +24,7 @@ fn main() {
         .add_systems(Update, slope_force.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, slope_indicator)
         .add_systems(Update, wall_collision.run_if(in_state(GameState::BallMoving)))
+        .add_systems(Update, hazard_check.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, hole_check.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
@@ -121,11 +123,23 @@ fn setup(
         MeshMaterial3d(materials.add(Color::srgb(0.85, 0.78, 0.5))),
         Transform::from_xyz(0.0, 0.02, -2.0),
     ));
+
+    // A blue water hazard off to the left; landing in it resets the shot + penalty.
+    commands.spawn((
+        Water {
+            min: Vec3::new(-8.0, 0.0, -5.0),
+            max: Vec3::new(-4.0, 0.0, -1.0),
+        },
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(4.0, 4.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.2, 0.4, 0.85))),
+        Transform::from_xyz(-6.0, 0.02, -3.0),
+    ));
 }
 
 fn ball_physics(
     time: Res<Time>,
     sand_q: Query<&Sand>,
+    mut last_rest: ResMut<LastRest>,
     mut next_state: ResMut<NextState<GameState>>,
     mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>,
 ) {
@@ -141,8 +155,31 @@ fn ball_physics(
         velocity.0 = new_vel;
         if is_at_rest(velocity.0, 0.05) {
             velocity.0 = Vec3::ZERO;
+            last_rest.0 = transform.translation;
             next_state.set(GameState::Aiming);
         }
+    }
+}
+
+fn hazard_check(
+    mut strokes: ResMut<Strokes>,
+    last_rest: Res<LastRest>,
+    water_q: Query<&Water>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut ball_q: Query<(&mut Transform, &mut Velocity), With<Ball>>,
+) {
+    let Ok((mut t, mut v)) = ball_q.single_mut() else {
+        return;
+    };
+    let p = t.translation;
+    let in_water = water_q
+        .iter()
+        .any(|w| p.x >= w.min.x && p.x <= w.max.x && p.z >= w.min.z && p.z <= w.max.z);
+    if in_water || is_out_of_bounds(p, 10.0, 10.0) {
+        t.translation = last_rest.0;
+        v.0 = Vec3::ZERO;
+        strokes.0 += 1; // penalty stroke
+        next_state.set(GameState::Aiming);
     }
 }
 

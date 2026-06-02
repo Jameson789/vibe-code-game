@@ -25,3 +25,13 @@ impl Default for AimState {
 /// Stroke count for the current hole.
 #[derive(Resource, Default)]
 pub struct Strokes(pub u32);
+
+/// The ball's last at-rest position, used to reset after water/out-of-bounds.
+#[derive(Resource)]
+pub struct LastRest(pub Vec3);
+
+impl Default for LastRest {
+    fn default() -> Self {
+        Self(Vec3::new(0.0, 0.3, 6.0))
+    }
+}

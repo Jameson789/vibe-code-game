@@ -40,3 +40,10 @@ pub struct Sand {
     pub min: Vec3,
     pub max: Vec3,
 }
+
+/// A rectangular water hazard (X-Z bounds).
+#[derive(Component)]
+pub struct Water {
+    pub min: Vec3,
+    pub max: Vec3,
+}
