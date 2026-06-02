@@ -7,6 +7,7 @@ pub enum GameState {
     Aiming,
     BallMoving,
     HoleComplete,
+    Penalty,
 }
 
 /// Current aim direction (yaw, radians) and shot power (0.0..=1.0).
@@ -33,5 +34,15 @@ pub struct LastRest(pub Vec3);
 impl Default for LastRest {
     fn default() -> Self {
         Self(Vec3::new(0.0, 0.3, 6.0))
+    }
+}
+
+/// Counts down the brief "hazard" message before returning the ball to aiming.
+#[derive(Resource)]
+pub struct PenaltyTimer(pub Timer);
+
+impl Default for PenaltyTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(1.2, TimerMode::Once))
     }
 }

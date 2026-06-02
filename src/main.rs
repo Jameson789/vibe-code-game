@@ -8,7 +8,7 @@ mod state;
 mod ui;
 use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall, Water};
 use physics::{integrate, is_at_rest, is_in_hole, is_out_of_bounds, reflect, slope_acceleration};
-use state::{AimState, GameState, LastRest, Strokes};
+use state::{AimState, GameState, LastRest, PenaltyTimer, Strokes};
 
 fn main() {
     App::new()
@@ -17,6 +17,7 @@ fn main() {
         .init_resource::<AimState>()
         .init_resource::<Strokes>()
         .init_resource::<LastRest>()
+        .init_resource::<PenaltyTimer>()
         .add_systems(Startup, setup)
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
@@ -32,6 +33,8 @@ fn main() {
         .add_systems(Update, camera::aim_indicator.run_if(in_state(GameState::Aiming)))
         .add_systems(OnEnter(GameState::HoleComplete), ui::show_win)
         .add_systems(Update, sink_animation.run_if(in_state(GameState::HoleComplete)))
+        .add_systems(OnEnter(GameState::Penalty), ui::show_penalty)
+        .add_systems(Update, penalty_countdown.run_if(in_state(GameState::Penalty)))
         .run();
 }
 
@@ -163,12 +166,12 @@ fn ball_physics(
 
 fn hazard_check(
     mut strokes: ResMut<Strokes>,
-    last_rest: Res<LastRest>,
     water_q: Query<&Water>,
+    mut penalty_timer: ResMut<PenaltyTimer>,
     mut next_state: ResMut<NextState<GameState>>,
-    mut ball_q: Query<(&mut Transform, &mut Velocity), With<Ball>>,
+    mut ball_q: Query<(&Transform, &mut Velocity), With<Ball>>,
 ) {
-    let Ok((mut t, mut v)) = ball_q.single_mut() else {
+    let Ok((t, mut v)) = ball_q.single_mut() else {
         return;
     };
     let p = t.translation;
@@ -176,9 +179,33 @@ fn hazard_check(
         .iter()
         .any(|w| p.x >= w.min.x && p.x <= w.max.x && p.z >= w.min.z && p.z <= w.max.z);
     if in_water || is_out_of_bounds(p, 10.0, 10.0) {
-        t.translation = last_rest.0;
+        // Freeze the ball, count the penalty, and show the message during a brief pause.
         v.0 = Vec3::ZERO;
         strokes.0 += 1; // penalty stroke
+        penalty_timer.0.reset();
+        next_state.set(GameState::Penalty);
+    }
+}
+
+/// During the penalty pause, count down; when done, return the ball to its last
+/// resting spot, clear the message, and resume aiming.
+fn penalty_countdown(
+    time: Res<Time>,
+    last_rest: Res<LastRest>,
+    mut penalty_timer: ResMut<PenaltyTimer>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    banner_q: Query<Entity, With<ui::PenaltyBanner>>,
+    mut ball_q: Query<&mut Transform, With<Ball>>,
+) {
+    penalty_timer.0.tick(time.delta());
+    if penalty_timer.0.is_finished() {
+        if let Ok(mut t) = ball_q.single_mut() {
+            t.translation = last_rest.0;
+        }
+        for e in &banner_q {
+            commands.entity(e).despawn();
+        }
         next_state.set(GameState::Aiming);
     }
 }

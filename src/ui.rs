@@ -55,3 +55,26 @@ pub fn show_win(mut commands: Commands, strokes: Res<Strokes>) {
         },
     ));
 }
+
+/// Marker for the temporary hazard message.
+#[derive(Component)]
+pub struct PenaltyBanner;
+
+/// Show a centered "water hazard" message during the penalty pause.
+pub fn show_penalty(mut commands: Commands) {
+    commands.spawn((
+        PenaltyBanner,
+        Text::new("Water hazard!  +1 stroke"),
+        TextFont {
+            font_size: 36.0,
+            ..default()
+        },
+        TextColor(Color::srgb(0.5, 0.8, 1.0)),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Percent(45.0),
+            left: Val::Percent(30.0),
+            ..default()
+        },
+    ));
+}
