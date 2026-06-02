@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 
+mod components;
+use components::Ball;
+
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
@@ -32,5 +35,13 @@ fn setup(
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 8.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
+    ));
+
+    // The golf ball: a small white sphere resting on the ground.
+    commands.spawn((
+        Ball,
+        Mesh3d(meshes.add(Sphere::new(0.3))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
+        Transform::from_xyz(0.0, 0.3, 6.0),
     ));
 }
