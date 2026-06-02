@@ -24,3 +24,12 @@ pub struct Hole {
 pub struct Wall {
     pub normal: Vec3,
 }
+
+/// A rectangular sloped region of the course. `normal` is the surface normal;
+/// `min`/`max` are X-Z bounds (Y ignored).
+#[derive(Component)]
+pub struct Slope {
+    pub normal: Vec3,
+    pub min: Vec3,
+    pub max: Vec3,
+}

@@ -28,6 +28,14 @@ pub fn reflect(velocity: Vec3, normal: Vec3, restitution: f32) -> Vec3 {
     reflected * restitution
 }
 
+/// Downhill acceleration on a surface with the given (unit) normal under gravity.
+/// Returns the gravity component tangent to the slope (zero on flat ground).
+pub fn slope_acceleration(normal: Vec3, gravity: f32) -> Vec3 {
+    let n = normal.normalize();
+    let g = Vec3::new(0.0, -gravity, 0.0);
+    g - g.dot(n) * n
+}
+
 /// True when the ball is over the hole (horizontal distance < radius) and slow
 /// enough to drop in rather than skip over.
 pub fn is_in_hole(ball: Vec3, hole: Vec3, hole_radius: f32, speed: f32, capture_speed: f32) -> bool {
@@ -104,5 +112,21 @@ mod tests {
     fn reflect_applies_restitution() {
         let v = reflect(Vec3::new(0.0, 0.0, -5.0), Vec3::Z, 0.5);
         assert!((v.z - 2.5).abs() < 1e-5);
+    }
+
+    #[test]
+    fn flat_ground_has_no_slope_force() {
+        let a = slope_acceleration(Vec3::Y, 9.8);
+        assert!(a.length() < 1e-5);
+    }
+
+    #[test]
+    fn tilted_ground_pushes_downhill() {
+        // Normal tilted toward +X means the +X side is the low side, so the
+        // ball accelerates downhill toward +X.
+        let normal = Vec3::new(0.3, 1.0, 0.0).normalize();
+        let a = slope_acceleration(normal, 9.8);
+        assert!(a.x > 0.0);
+        assert!(a.length() > 0.1);
     }
 }

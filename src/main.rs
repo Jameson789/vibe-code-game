@@ -6,8 +6,8 @@ mod input;
 mod physics;
 mod state;
 mod ui;
-use components::{Ball, Hole, MainCamera, Velocity, Wall};
-use physics::{integrate, is_at_rest, is_in_hole, reflect};
+use components::{Ball, Hole, MainCamera, Slope, Velocity, Wall};
+use physics::{integrate, is_at_rest, is_in_hole, reflect, slope_acceleration};
 use state::{AimState, GameState, Strokes};
 
 fn main() {
@@ -20,6 +20,8 @@ fn main() {
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
         .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
+        .add_systems(Update, slope_force.run_if(in_state(GameState::BallMoving)))
+        .add_systems(Update, slope_indicator)
         .add_systems(Update, wall_collision.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, hole_check.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
@@ -93,6 +95,21 @@ fn setup(
             Transform::from_translation(pos),
         ));
     }
+
+    // Slope zone: a flat patch flush with the ground (no clipping). Its normal
+    // leans toward +X, so the +X side is "downhill" and the ball drifts +X over it.
+    // A white arrow (see slope_indicator) shows the downhill direction.
+    let slope_normal = Vec3::new(0.4, 1.0, 0.0).normalize();
+    commands.spawn((
+        Slope {
+            normal: slope_normal,
+            min: Vec3::new(2.0, 0.0, -8.0),
+            max: Vec3::new(8.0, 0.0, 4.0),
+        },
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(6.0, 12.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.3, 0.55, 0.35))),
+        Transform::from_xyz(5.0, 0.02, -2.0),
+    ));
 }
 
 fn ball_physics(
@@ -131,6 +148,41 @@ fn hole_check(
         4.0,
     ) {
         next_state.set(GameState::HoleComplete);
+    }
+}
+
+/// Draws a white downhill arrow over each slope zone so the slope is legible.
+fn slope_indicator(mut gizmos: Gizmos, slope_q: Query<&Slope>) {
+    for slope in &slope_q {
+        let center = (slope.min + slope.max) * 0.5;
+        let accel = slope_acceleration(slope.normal, 9.8);
+        let downhill = Vec3::new(accel.x, 0.0, accel.z).normalize_or_zero();
+        let start = Vec3::new(center.x, 0.15, center.z);
+        gizmos.arrow(start, start + downhill * 2.5, Color::srgb(1.0, 1.0, 1.0));
+    }
+}
+
+fn slope_force(
+    time: Res<Time>,
+    slope_q: Query<&Slope>,
+    mut ball_q: Query<(&Transform, &mut Velocity), With<Ball>>,
+) {
+    let dt = time.delta_secs();
+    let Ok((t, mut v)) = ball_q.single_mut() else {
+        return;
+    };
+    for slope in &slope_q {
+        let p = t.translation;
+        let inside = p.x >= slope.min.x
+            && p.x <= slope.max.x
+            && p.z >= slope.min.z
+            && p.z <= slope.max.z;
+        if inside {
+            // Apply only the horizontal drift; the ball stays pinned to the ground.
+            let accel = slope_acceleration(slope.normal, 9.8);
+            v.0.x += accel.x * dt;
+            v.0.z += accel.z * dt;
+        }
     }
 }
 
