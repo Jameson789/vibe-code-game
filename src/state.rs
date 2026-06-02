@@ -20,3 +20,7 @@ impl Default for AimState {
         Self { yaw: 0.0, power: 0.5 }
     }
 }
+
+/// Stroke count for the current hole.
+#[derive(Resource, Default)]
+pub struct Strokes(pub u32);

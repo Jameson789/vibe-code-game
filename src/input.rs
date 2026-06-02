@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::components::{Ball, Velocity};
 use crate::physics::launch_velocity;
-use crate::state::{AimState, GameState};
+use crate::state::{AimState, GameState, Strokes};
 
 /// While aiming, ←/→ rotate aim and ↑/↓ change power. Logs the values so we can
 /// verify before any visible aim indicator exists.
@@ -41,6 +41,7 @@ pub fn aim_input(
 pub fn swing(
     keys: Res<ButtonInput<KeyCode>>,
     aim: Res<AimState>,
+    mut strokes: ResMut<Strokes>,
     mut next_state: ResMut<NextState<GameState>>,
     mut query: Query<&mut Velocity, With<Ball>>,
 ) {
@@ -49,6 +50,7 @@ pub fn swing(
         for mut velocity in &mut query {
             velocity.0 = launch_velocity(aim.yaw, aim.power, max_speed);
         }
+        strokes.0 += 1;
         next_state.set(GameState::BallMoving);
     }
 }

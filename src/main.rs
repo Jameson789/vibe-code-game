@@ -5,16 +5,20 @@ mod components;
 mod input;
 mod physics;
 mod state;
+mod ui;
 use components::{Ball, Hole, MainCamera, Velocity};
 use physics::{integrate, is_at_rest};
-use state::{AimState, GameState};
+use state::{AimState, GameState, Strokes};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .init_state::<GameState>()
         .init_resource::<AimState>()
+        .init_resource::<Strokes>()
         .add_systems(Startup, setup)
+        .add_systems(Startup, ui::setup_hud)
+        .add_systems(Update, ui::update_hud)
         .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
