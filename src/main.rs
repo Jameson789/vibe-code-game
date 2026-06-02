@@ -14,8 +14,9 @@ fn main() {
         .init_state::<GameState>()
         .init_resource::<AimState>()
         .add_systems(Startup, setup)
-        .add_systems(Update, ball_physics)
+        .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
+        .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
         .run();
 }
 
@@ -56,7 +57,11 @@ fn setup(
     ));
 }
 
-fn ball_physics(time: Res<Time>, mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>) {
+fn ball_physics(
+    time: Res<Time>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>,
+) {
     let dt = time.delta_secs();
     for (mut transform, mut velocity) in &mut query {
         let (new_pos, new_vel) = integrate(transform.translation, velocity.0, 1.2, dt);
@@ -64,6 +69,7 @@ fn ball_physics(time: Res<Time>, mut query: Query<(&mut Transform, &mut Velocity
         velocity.0 = new_vel;
         if is_at_rest(velocity.0, 0.05) {
             velocity.0 = Vec3::ZERO;
+            next_state.set(GameState::Aiming);
         }
     }
 }

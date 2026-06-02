@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use crate::state::AimState;
+use crate::components::{Ball, Velocity};
+use crate::physics::launch_velocity;
+use crate::state::{AimState, GameState};
 
 /// While aiming, ←/→ rotate aim and ↑/↓ change power. Logs the values so we can
 /// verify before any visible aim indicator exists.
@@ -32,5 +34,21 @@ pub fn aim_input(
         KeyCode::ArrowDown,
     ]) {
         info!("aim yaw = {:.2} rad, power = {:.0}%", aim.yaw, aim.power * 100.0);
+    }
+}
+
+/// Spacebar swing: launch the ball from the current aim/power, then enter BallMoving.
+pub fn swing(
+    keys: Res<ButtonInput<KeyCode>>,
+    aim: Res<AimState>,
+    mut next_state: ResMut<NextState<GameState>>,
+    mut query: Query<&mut Velocity, With<Ball>>,
+) {
+    if keys.just_pressed(KeyCode::Space) {
+        let max_speed = 36.0;
+        for mut velocity in &mut query {
+            velocity.0 = launch_velocity(aim.yaw, aim.power, max_speed);
+        }
+        next_state.set(GameState::BallMoving);
     }
 }

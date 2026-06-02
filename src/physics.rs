@@ -14,6 +14,12 @@ pub fn is_at_rest(velocity: Vec3, threshold: f32) -> bool {
     velocity.length() < threshold
 }
 
+/// Convert aim yaw + power into a launch velocity. yaw=0 points toward -Z.
+pub fn launch_velocity(yaw: f32, power: f32, max_speed: f32) -> Vec3 {
+    let speed = power.clamp(0.0, 1.0) * max_speed;
+    Vec3::new(yaw.sin() * speed, 0.0, -yaw.cos() * speed)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -35,5 +41,18 @@ mod tests {
     fn is_at_rest_true_below_threshold() {
         assert!(is_at_rest(Vec3::new(0.01, 0.0, 0.0), 0.05));
         assert!(!is_at_rest(Vec3::new(1.0, 0.0, 0.0), 0.05));
+    }
+
+    #[test]
+    fn launch_zero_power_is_zero_velocity() {
+        let v = launch_velocity(0.0, 0.0, 10.0);
+        assert!(v.length() < 1e-6);
+    }
+
+    #[test]
+    fn launch_yaw_zero_points_negative_z() {
+        let v = launch_velocity(0.0, 1.0, 10.0);
+        assert!((v.z + 10.0).abs() < 1e-5);
+        assert!(v.x.abs() < 1e-5);
     }
 }
