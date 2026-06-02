@@ -8,6 +8,7 @@ pub enum GameState {
     BallMoving,
     HoleComplete,
     Penalty,
+    GameOver,
 }
 
 /// Current aim direction (yaw, radians) and shot power (0.0..=1.0).

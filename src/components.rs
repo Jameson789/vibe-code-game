@@ -47,3 +47,7 @@ pub struct Water {
     pub min: Vec3,
     pub max: Vec3,
 }
+
+/// Tags entities that belong to the current hole and should be cleared on advance.
+#[derive(Component)]
+pub struct HoleEntity;

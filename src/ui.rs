@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::course::Course;
 use crate::state::{AimState, Strokes};
 
 /// Marker for the heads-up text.
@@ -42,15 +43,43 @@ pub struct WinBanner;
 pub fn show_win(mut commands: Commands, strokes: Res<Strokes>) {
     commands.spawn((
         WinBanner,
-        Text::new(format!("Hole complete in {} strokes!", strokes.0)),
+        Text::new(format!(
+            "Hole done in {} strokes!\nPress Space for next hole",
+            strokes.0
+        )),
         TextFont {
-            font_size: 40.0,
+            font_size: 36.0,
             ..default()
         },
         Node {
             position_type: PositionType::Absolute,
-            top: Val::Percent(45.0),
-            left: Val::Percent(30.0),
+            top: Val::Percent(43.0),
+            left: Val::Percent(28.0),
+            ..default()
+        },
+    ));
+}
+
+/// Marker for the end-of-course screen.
+#[derive(Component)]
+pub struct GameOverBanner;
+
+/// Show the final total when every hole is complete.
+pub fn show_game_over(mut commands: Commands, course_res: Res<Course>) {
+    commands.spawn((
+        GameOverBanner,
+        Text::new(format!(
+            "Course complete!\nTotal: {} strokes",
+            course_res.total_strokes
+        )),
+        TextFont {
+            font_size: 44.0,
+            ..default()
+        },
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Percent(40.0),
+            left: Val::Percent(28.0),
             ..default()
         },
     ));

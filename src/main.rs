@@ -8,7 +8,7 @@ mod physics;
 mod state;
 mod ui;
 use course::{course, Course};
-use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall, Water};
+use components::{Ball, Hole, HoleEntity, MainCamera, Sand, Slope, Velocity, Wall, Water};
 use physics::{integrate, is_at_rest, is_in_hole, is_out_of_bounds, reflect, slope_acceleration};
 use state::{AimState, GameState, LastRest, PenaltyTimer, Strokes};
 
@@ -34,10 +34,12 @@ fn main() {
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, camera::chase_camera)
         .add_systems(Update, camera::aim_indicator.run_if(in_state(GameState::Aiming)))
-        .add_systems(OnEnter(GameState::HoleComplete), ui::show_win)
+        .add_systems(OnEnter(GameState::HoleComplete), (ui::show_win, bank_strokes))
         .add_systems(Update, sink_animation.run_if(in_state(GameState::HoleComplete)))
+        .add_systems(Update, advance_hole.run_if(in_state(GameState::HoleComplete)))
         .add_systems(OnEnter(GameState::Penalty), ui::show_penalty)
         .add_systems(Update, penalty_countdown.run_if(in_state(GameState::Penalty)))
+        .add_systems(OnEnter(GameState::GameOver), ui::show_game_over)
         .run();
 }
 
@@ -76,6 +78,7 @@ fn setup(
     commands.spawn((
         Ball,
         Velocity::default(),
+        HoleEntity,
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_translation(layout.ball_start),
@@ -86,6 +89,7 @@ fn setup(
         Hole {
             radius: layout.hole_radius,
         },
+        HoleEntity,
         Mesh3d(meshes.add(Cylinder::new(layout.hole_radius, 0.02))),
         MeshMaterial3d(materials.add(Color::srgb(0.05, 0.05, 0.05))),
         Transform::from_translation(layout.hole_pos),
@@ -299,6 +303,67 @@ fn wall_collision(
             v.0 = reflect(v.0, n, 0.7);
         }
     }
+}
+
+/// When a hole is completed, add its strokes to the running course total.
+fn bank_strokes(strokes: Res<Strokes>, mut course_res: ResMut<Course>) {
+    course_res.total_strokes += strokes.0;
+}
+
+/// On HoleComplete, Space clears the current hole and loads the next one (or ends
+/// the game after the last hole).
+fn advance_hole(
+    keys: Res<ButtonInput<KeyCode>>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut course_res: ResMut<Course>,
+    mut strokes: ResMut<Strokes>,
+    mut last_rest: ResMut<LastRest>,
+    mut next_state: ResMut<NextState<GameState>>,
+    hole_entities: Query<Entity, With<HoleEntity>>,
+    banner_q: Query<Entity, With<ui::WinBanner>>,
+) {
+    if !keys.just_pressed(KeyCode::Space) {
+        return;
+    }
+    // Clear the finished hole's ball + hole and the win banner.
+    for e in &hole_entities {
+        commands.entity(e).despawn();
+    }
+    for e in &banner_q {
+        commands.entity(e).despawn();
+    }
+
+    course_res.index += 1;
+    let layouts = course();
+    if course_res.index >= layouts.len() {
+        next_state.set(GameState::GameOver);
+        return;
+    }
+
+    let layout = &layouts[course_res.index];
+    strokes.0 = 0;
+    last_rest.0 = layout.ball_start;
+
+    commands.spawn((
+        Ball,
+        Velocity::default(),
+        HoleEntity,
+        Mesh3d(meshes.add(Sphere::new(0.3))),
+        MeshMaterial3d(materials.add(Color::WHITE)),
+        Transform::from_translation(layout.ball_start),
+    ));
+    commands.spawn((
+        Hole {
+            radius: layout.hole_radius,
+        },
+        HoleEntity,
+        Mesh3d(meshes.add(Cylinder::new(layout.hole_radius, 0.02))),
+        MeshMaterial3d(materials.add(Color::srgb(0.05, 0.05, 0.05))),
+        Transform::from_translation(layout.hole_pos),
+    ));
+    next_state.set(GameState::Aiming);
 }
 
 /// After sinking, ease the ball toward the hole center and drop it below the
