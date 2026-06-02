@@ -20,6 +20,14 @@ pub fn launch_velocity(yaw: f32, power: f32, max_speed: f32) -> Vec3 {
     Vec3::new(yaw.sin() * speed, 0.0, -yaw.cos() * speed)
 }
 
+/// Reflect a velocity off a surface with the given (unit) normal, scaled by
+/// restitution (1.0 = perfectly bouncy, 0.0 = dead stop into the wall).
+pub fn reflect(velocity: Vec3, normal: Vec3, restitution: f32) -> Vec3 {
+    let n = normal.normalize();
+    let reflected = velocity - 2.0 * velocity.dot(n) * n;
+    reflected * restitution
+}
+
 /// True when the ball is over the hole (horizontal distance < radius) and slow
 /// enough to drop in rather than skip over.
 pub fn is_in_hole(ball: Vec3, hole: Vec3, hole_radius: f32, speed: f32, capture_speed: f32) -> bool {
@@ -84,5 +92,17 @@ mod tests {
         let b = Vec3::new(3.0, 0.3, -6.0);
         let h = Vec3::new(0.0, 0.0, -6.0);
         assert!(!is_in_hole(b, h, 0.6, 0.5, 3.0));
+    }
+
+    #[test]
+    fn reflect_reverses_along_normal() {
+        let v = reflect(Vec3::new(0.0, 0.0, -5.0), Vec3::Z, 1.0);
+        assert!((v.z - 5.0).abs() < 1e-5);
+    }
+
+    #[test]
+    fn reflect_applies_restitution() {
+        let v = reflect(Vec3::new(0.0, 0.0, -5.0), Vec3::Z, 0.5);
+        assert!((v.z - 2.5).abs() < 1e-5);
     }
 }

@@ -7,7 +7,7 @@ mod physics;
 mod state;
 mod ui;
 use components::{Ball, Hole, MainCamera, Velocity, Wall};
-use physics::{integrate, is_at_rest, is_in_hole};
+use physics::{integrate, is_at_rest, is_in_hole, reflect};
 use state::{AimState, GameState, Strokes};
 
 fn main() {
@@ -20,6 +20,7 @@ fn main() {
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
         .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
+        .add_systems(Update, wall_collision.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, hole_check.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
@@ -130,6 +131,33 @@ fn hole_check(
         4.0,
     ) {
         next_state.set(GameState::HoleComplete);
+    }
+}
+
+fn wall_collision(
+    mut ball_q: Query<(&mut Transform, &mut Velocity), With<Ball>>,
+    wall_q: Query<&Wall>,
+) {
+    let half = 9.5_f32; // ball is reflected just inside the walls
+    let Ok((mut t, mut v)) = ball_q.single_mut() else {
+        return;
+    };
+    // Reflect off whichever bound was crossed, using the matching wall normal.
+    for wall in &wall_q {
+        let n = wall.normal;
+        if n == Vec3::Z && t.translation.z < -half {
+            t.translation.z = -half;
+            v.0 = reflect(v.0, n, 0.7);
+        } else if n == -Vec3::Z && t.translation.z > half {
+            t.translation.z = half;
+            v.0 = reflect(v.0, n, 0.7);
+        } else if n == Vec3::X && t.translation.x < -half {
+            t.translation.x = -half;
+            v.0 = reflect(v.0, n, 0.7);
+        } else if n == -Vec3::X && t.translation.x > half {
+            t.translation.x = half;
+            v.0 = reflect(v.0, n, 0.7);
+        }
     }
 }
 
