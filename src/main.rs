@@ -1,15 +1,21 @@
 use bevy::prelude::*;
 
 mod components;
+mod input;
 mod physics;
+mod state;
 use components::{Ball, Velocity};
 use physics::{integrate, is_at_rest};
+use state::{AimState, GameState};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
+        .init_state::<GameState>()
+        .init_resource::<AimState>()
         .add_systems(Startup, setup)
         .add_systems(Update, ball_physics)
+        .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .run();
 }
 
@@ -41,10 +47,9 @@ fn setup(
     ));
 
     // The golf ball: a small white sphere resting on the ground.
-    // (Temporary starting velocity so we can watch friction stop it this task.)
     commands.spawn((
         Ball,
-        Velocity(Vec3::new(0.0, 0.0, -4.0)),
+        Velocity::default(),
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(0.0, 0.3, 6.0),
