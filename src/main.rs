@@ -1,12 +1,15 @@
 use bevy::prelude::*;
 
 mod components;
-use components::Ball;
+mod physics;
+use components::{Ball, Velocity};
+use physics::{integrate, is_at_rest};
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
+        .add_systems(Update, ball_physics)
         .run();
 }
 
@@ -38,10 +41,24 @@ fn setup(
     ));
 
     // The golf ball: a small white sphere resting on the ground.
+    // (Temporary starting velocity so we can watch friction stop it this task.)
     commands.spawn((
         Ball,
+        Velocity(Vec3::new(0.0, 0.0, -4.0)),
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(0.0, 0.3, 6.0),
     ));
+}
+
+fn ball_physics(time: Res<Time>, mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>) {
+    let dt = time.delta_secs();
+    for (mut transform, mut velocity) in &mut query {
+        let (new_pos, new_vel) = integrate(transform.translation, velocity.0, 1.2, dt);
+        transform.translation = new_pos;
+        velocity.0 = new_vel;
+        if is_at_rest(velocity.0, 0.05) {
+            velocity.0 = Vec3::ZERO;
+        }
+    }
 }

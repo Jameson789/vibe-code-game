@@ -1,0 +1,39 @@
+use bevy::math::Vec3;
+
+/// Advance position by velocity and apply rolling friction for one step.
+/// Returns the new (position, velocity).
+pub fn integrate(position: Vec3, velocity: Vec3, friction: f32, dt: f32) -> (Vec3, Vec3) {
+    let new_position = position + velocity * dt;
+    let decay = (1.0 - friction * dt).max(0.0);
+    let new_velocity = velocity * decay;
+    (new_position, new_velocity)
+}
+
+/// True when the ball is moving slowly enough to be considered stopped.
+pub fn is_at_rest(velocity: Vec3, threshold: f32) -> bool {
+    velocity.length() < threshold
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn integrate_advances_position_by_velocity_with_no_friction() {
+        let (pos, vel) = integrate(Vec3::ZERO, Vec3::new(2.0, 0.0, 0.0), 0.0, 0.5);
+        assert!((pos.x - 1.0).abs() < 1e-6);
+        assert!((vel.x - 2.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn integrate_reduces_speed_with_friction() {
+        let (_, vel) = integrate(Vec3::ZERO, Vec3::new(4.0, 0.0, 0.0), 1.0, 0.25);
+        assert!(vel.x < 4.0 && vel.x > 0.0);
+    }
+
+    #[test]
+    fn is_at_rest_true_below_threshold() {
+        assert!(is_at_rest(Vec3::new(0.01, 0.0, 0.0), 0.05));
+        assert!(!is_at_rest(Vec3::new(1.0, 0.0, 0.0), 0.05));
+    }
+}
