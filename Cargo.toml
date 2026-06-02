@@ -1,0 +1,11 @@
+[package]
+name = "simple_3d_golf"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = "0.18.1"
+
+# Compile dependencies with optimizations even in dev builds, so the game runs smoothly.
+[profile.dev.package."*"]
+opt-level = 3
