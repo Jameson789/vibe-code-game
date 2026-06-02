@@ -26,6 +26,7 @@ fn main() {
         .add_systems(Update, camera::chase_camera)
         .add_systems(Update, camera::aim_indicator.run_if(in_state(GameState::Aiming)))
         .add_systems(OnEnter(GameState::HoleComplete), ui::show_win)
+        .add_systems(Update, sink_animation.run_if(in_state(GameState::HoleComplete)))
         .run();
 }
 
@@ -113,4 +114,23 @@ fn hole_check(
     ) {
         next_state.set(GameState::HoleComplete);
     }
+}
+
+/// After sinking, ease the ball toward the hole center and drop it below the
+/// surface so it visually falls into the hole.
+fn sink_animation(
+    time: Res<Time>,
+    hole_q: Query<&Transform, (With<Hole>, Without<Ball>)>,
+    mut ball_q: Query<&mut Transform, With<Ball>>,
+) {
+    let Ok(hole) = hole_q.single() else {
+        return;
+    };
+    let Ok(mut ball) = ball_q.single_mut() else {
+        return;
+    };
+    // Target: centered on the hole, sunk below the ground plane.
+    let target = Vec3::new(hole.translation.x, -0.4, hole.translation.z);
+    let t = (time.delta_secs() * 6.0).min(1.0);
+    ball.translation = ball.translation.lerp(target, t);
 }
