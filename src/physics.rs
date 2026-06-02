@@ -20,6 +20,15 @@ pub fn launch_velocity(yaw: f32, power: f32, max_speed: f32) -> Vec3 {
     Vec3::new(yaw.sin() * speed, 0.0, -yaw.cos() * speed)
 }
 
+/// True when the ball is over the hole (horizontal distance < radius) and slow
+/// enough to drop in rather than skip over.
+pub fn is_in_hole(ball: Vec3, hole: Vec3, hole_radius: f32, speed: f32, capture_speed: f32) -> bool {
+    let dx = ball.x - hole.x;
+    let dz = ball.z - hole.z;
+    let horizontal = (dx * dx + dz * dz).sqrt();
+    horizontal < hole_radius && speed < capture_speed
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -54,5 +63,26 @@ mod tests {
         let v = launch_velocity(0.0, 1.0, 10.0);
         assert!((v.z + 10.0).abs() < 1e-5);
         assert!(v.x.abs() < 1e-5);
+    }
+
+    #[test]
+    fn in_hole_when_close_and_slow() {
+        let b = Vec3::new(0.1, 0.3, -6.0);
+        let h = Vec3::new(0.0, 0.0, -6.0);
+        assert!(is_in_hole(b, h, 0.6, 1.0, 3.0));
+    }
+
+    #[test]
+    fn not_in_hole_when_too_fast() {
+        let b = Vec3::new(0.1, 0.3, -6.0);
+        let h = Vec3::new(0.0, 0.0, -6.0);
+        assert!(!is_in_hole(b, h, 0.6, 9.0, 3.0));
+    }
+
+    #[test]
+    fn not_in_hole_when_far() {
+        let b = Vec3::new(3.0, 0.3, -6.0);
+        let h = Vec3::new(0.0, 0.0, -6.0);
+        assert!(!is_in_hole(b, h, 0.6, 0.5, 3.0));
     }
 }

@@ -7,7 +7,7 @@ mod physics;
 mod state;
 mod ui;
 use components::{Ball, Hole, MainCamera, Velocity};
-use physics::{integrate, is_at_rest};
+use physics::{integrate, is_at_rest, is_in_hole};
 use state::{AimState, GameState, Strokes};
 
 fn main() {
@@ -20,10 +20,12 @@ fn main() {
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
         .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
+        .add_systems(Update, hole_check.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, camera::chase_camera)
         .add_systems(Update, camera::aim_indicator.run_if(in_state(GameState::Aiming)))
+        .add_systems(OnEnter(GameState::HoleComplete), ui::show_win)
         .run();
 }
 
@@ -88,5 +90,27 @@ fn ball_physics(
             velocity.0 = Vec3::ZERO;
             next_state.set(GameState::Aiming);
         }
+    }
+}
+
+fn hole_check(
+    mut next_state: ResMut<NextState<GameState>>,
+    ball_q: Query<(&Transform, &Velocity), With<Ball>>,
+    hole_q: Query<(&Transform, &Hole)>,
+) {
+    let Ok((ball_t, ball_v)) = ball_q.single() else {
+        return;
+    };
+    let Ok((hole_t, hole)) = hole_q.single() else {
+        return;
+    };
+    if is_in_hole(
+        ball_t.translation,
+        hole_t.translation,
+        hole.radius,
+        ball_v.0.length(),
+        4.0,
+    ) {
+        next_state.set(GameState::HoleComplete);
     }
 }

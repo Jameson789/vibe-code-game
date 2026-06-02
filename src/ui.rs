@@ -33,3 +33,25 @@ pub fn update_hud(
         **text = format!("Strokes: {}\nPower: {:.0}%", strokes.0, aim.power * 100.0);
     }
 }
+
+/// Marker for the win message.
+#[derive(Component)]
+pub struct WinBanner;
+
+/// Show a centered win message when the hole is completed.
+pub fn show_win(mut commands: Commands, strokes: Res<Strokes>) {
+    commands.spawn((
+        WinBanner,
+        Text::new(format!("Hole complete in {} strokes!", strokes.0)),
+        TextFont {
+            font_size: 40.0,
+            ..default()
+        },
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Percent(45.0),
+            left: Val::Percent(30.0),
+            ..default()
+        },
+    ));
+}

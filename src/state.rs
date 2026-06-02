@@ -6,6 +6,7 @@ pub enum GameState {
     #[default]
     Aiming,
     BallMoving,
+    HoleComplete,
 }
 
 /// Current aim direction (yaw, radians) and shot power (0.0..=1.0).
