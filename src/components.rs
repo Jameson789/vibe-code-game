@@ -33,3 +33,10 @@ pub struct Slope {
     pub min: Vec3,
     pub max: Vec3,
 }
+
+/// A rectangular sand region (X-Z bounds) that slows the ball.
+#[derive(Component)]
+pub struct Sand {
+    pub min: Vec3,
+    pub max: Vec3,
+}

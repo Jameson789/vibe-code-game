@@ -6,7 +6,7 @@ mod input;
 mod physics;
 mod state;
 mod ui;
-use components::{Ball, Hole, MainCamera, Slope, Velocity, Wall};
+use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall};
 use physics::{integrate, is_at_rest, is_in_hole, reflect, slope_acceleration};
 use state::{AimState, GameState, Strokes};
 
@@ -110,16 +110,33 @@ fn setup(
         MeshMaterial3d(materials.add(Color::srgb(0.3, 0.55, 0.35))),
         Transform::from_xyz(5.0, 0.02, -2.0),
     ));
+
+    // A tan sand patch between the ball and the hole; it slows the ball sharply.
+    commands.spawn((
+        Sand {
+            min: Vec3::new(-3.0, 0.0, -3.0),
+            max: Vec3::new(3.0, 0.0, -1.0),
+        },
+        Mesh3d(meshes.add(Plane3d::default().mesh().size(6.0, 2.0))),
+        MeshMaterial3d(materials.add(Color::srgb(0.85, 0.78, 0.5))),
+        Transform::from_xyz(0.0, 0.02, -2.0),
+    ));
 }
 
 fn ball_physics(
     time: Res<Time>,
+    sand_q: Query<&Sand>,
     mut next_state: ResMut<NextState<GameState>>,
     mut query: Query<(&mut Transform, &mut Velocity), With<Ball>>,
 ) {
     let dt = time.delta_secs();
     for (mut transform, mut velocity) in &mut query {
-        let (new_pos, new_vel) = integrate(transform.translation, velocity.0, 1.2, dt);
+        let p = transform.translation;
+        let in_sand = sand_q
+            .iter()
+            .any(|s| p.x >= s.min.x && p.x <= s.max.x && p.z >= s.min.z && p.z <= s.max.z);
+        let friction = if in_sand { 4.0 } else { 1.2 };
+        let (new_pos, new_vel) = integrate(transform.translation, velocity.0, friction, dt);
         transform.translation = new_pos;
         velocity.0 = new_vel;
         if is_at_rest(velocity.0, 0.05) {
