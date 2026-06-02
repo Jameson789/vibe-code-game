@@ -21,3 +21,17 @@ pub fn chase_camera(
     cam.translation = target;
     cam.look_at(ball.translation, Vec3::Y);
 }
+
+/// Draws a line from the ball in the aim direction, length scaled by power.
+pub fn aim_indicator(
+    mut gizmos: Gizmos,
+    aim: Res<AimState>,
+    ball_q: Query<&Transform, With<Ball>>,
+) {
+    let Ok(ball) = ball_q.single() else { return };
+    let forward = Vec3::new(aim.yaw.sin(), 0.0, -aim.yaw.cos());
+    let length = 1.0 + aim.power * 4.0;
+    let start = ball.translation;
+    let end = start + forward * length;
+    gizmos.line(start, end, Color::srgb(1.0, 1.0, 0.0));
+}

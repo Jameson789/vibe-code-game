@@ -19,6 +19,7 @@ fn main() {
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, camera::chase_camera)
+        .add_systems(Update, camera::aim_indicator.run_if(in_state(GameState::Aiming)))
         .run();
 }
 
