@@ -6,7 +6,7 @@ mod input;
 mod physics;
 mod state;
 mod ui;
-use components::{Ball, Hole, MainCamera, Velocity};
+use components::{Ball, Hole, MainCamera, Velocity, Wall};
 use physics::{integrate, is_at_rest, is_in_hole};
 use state::{AimState, GameState, Strokes};
 
@@ -75,6 +75,23 @@ fn setup(
         MeshMaterial3d(materials.add(Color::srgb(0.05, 0.05, 0.05))),
         Transform::from_translation(hole_pos),
     ));
+
+    // Four walls just inside the edges of the 20x20 ground (half-extent 10).
+    let wall_specs = [
+        (Vec3::new(0.0, 0.5, -10.0), Vec3::new(20.0, 1.0, 0.5), Vec3::Z), // far,  pushes +Z
+        (Vec3::new(0.0, 0.5, 10.0), Vec3::new(20.0, 1.0, 0.5), -Vec3::Z), // near, pushes -Z
+        (Vec3::new(-10.0, 0.5, 0.0), Vec3::new(0.5, 1.0, 20.0), Vec3::X), // left, pushes +X
+        (Vec3::new(10.0, 0.5, 0.0), Vec3::new(0.5, 1.0, 20.0), -Vec3::X), // right, pushes -X
+    ];
+    let wall_material = materials.add(Color::srgb(0.4, 0.3, 0.2));
+    for (pos, size, normal) in wall_specs {
+        commands.spawn((
+            Wall { normal },
+            Mesh3d(meshes.add(Cuboid::new(size.x, size.y, size.z))),
+            MeshMaterial3d(wall_material.clone()),
+            Transform::from_translation(pos),
+        ));
+    }
 }
 
 fn ball_physics(

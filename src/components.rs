@@ -17,3 +17,10 @@ pub struct MainCamera;
 pub struct Hole {
     pub radius: f32,
 }
+
+/// An axis-aligned wall. `normal` is the unit direction the wall pushes the ball
+/// back toward (pointing into the play area).
+#[derive(Component)]
+pub struct Wall {
+    pub normal: Vec3,
+}
