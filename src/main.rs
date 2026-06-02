@@ -1,10 +1,11 @@
 use bevy::prelude::*;
 
+mod camera;
 mod components;
 mod input;
 mod physics;
 mod state;
-use components::{Ball, Velocity};
+use components::{Ball, MainCamera, Velocity};
 use physics::{integrate, is_at_rest};
 use state::{AimState, GameState};
 
@@ -17,6 +18,7 @@ fn main() {
         .add_systems(Update, ball_physics.run_if(in_state(GameState::BallMoving)))
         .add_systems(Update, input::aim_input.run_if(in_state(GameState::Aiming)))
         .add_systems(Update, input::swing.run_if(in_state(GameState::Aiming)))
+        .add_systems(Update, camera::chase_camera)
         .run();
 }
 
@@ -41,8 +43,9 @@ fn setup(
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    // Camera looking down at the plane from an angle.
+    // Camera (a chase camera repositions it behind the ball every frame).
     commands.spawn((
+        MainCamera,
         Camera3d::default(),
         Transform::from_xyz(0.0, 8.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
