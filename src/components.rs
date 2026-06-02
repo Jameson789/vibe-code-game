@@ -11,3 +11,9 @@ pub struct Velocity(pub Vec3);
 /// Marks the main game camera.
 #[derive(Component)]
 pub struct MainCamera;
+
+/// The target hole. `radius` is the capture radius on the ground.
+#[derive(Component)]
+pub struct Hole {
+    pub radius: f32,
+}

@@ -5,7 +5,7 @@ mod components;
 mod input;
 mod physics;
 mod state;
-use components::{Ball, MainCamera, Velocity};
+use components::{Ball, Hole, MainCamera, Velocity};
 use physics::{integrate, is_at_rest};
 use state::{AimState, GameState};
 
@@ -58,6 +58,15 @@ fn setup(
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(materials.add(Color::WHITE)),
         Transform::from_xyz(0.0, 0.3, 6.0),
+    ));
+
+    // The hole: a dark flat disc near the far end of the course.
+    let hole_pos = Vec3::new(0.0, 0.01, -6.0);
+    commands.spawn((
+        Hole { radius: 0.6 },
+        Mesh3d(meshes.add(Cylinder::new(0.6, 0.02))),
+        MeshMaterial3d(materials.add(Color::srgb(0.05, 0.05, 0.05))),
+        Transform::from_translation(hole_pos),
     ));
 }
 
