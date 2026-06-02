@@ -2,10 +2,12 @@ use bevy::prelude::*;
 
 mod camera;
 mod components;
+mod course;
 mod input;
 mod physics;
 mod state;
 mod ui;
+use course::{course, Course};
 use components::{Ball, Hole, MainCamera, Sand, Slope, Velocity, Wall, Water};
 use physics::{integrate, is_at_rest, is_in_hole, is_out_of_bounds, reflect, slope_acceleration};
 use state::{AimState, GameState, LastRest, PenaltyTimer, Strokes};
@@ -18,6 +20,7 @@ fn main() {
         .init_resource::<Strokes>()
         .init_resource::<LastRest>()
         .init_resource::<PenaltyTimer>()
+        .init_resource::<Course>()
         .add_systems(Startup, setup)
         .add_systems(Startup, ui::setup_hud)
         .add_systems(Update, ui::update_hud)
@@ -66,22 +69,26 @@ fn setup(
         Transform::from_xyz(0.0, 8.0, 12.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
+    // Ball + hole are loaded from the first hole's layout.
+    let layout = &course()[0];
+
     // The golf ball: a small white sphere resting on the ground.
     commands.spawn((
         Ball,
         Velocity::default(),
         Mesh3d(meshes.add(Sphere::new(0.3))),
         MeshMaterial3d(materials.add(Color::WHITE)),
-        Transform::from_xyz(0.0, 0.3, 6.0),
+        Transform::from_translation(layout.ball_start),
     ));
 
     // The hole: a dark flat disc near the far end of the course.
-    let hole_pos = Vec3::new(0.0, 0.01, -6.0);
     commands.spawn((
-        Hole { radius: 0.6 },
-        Mesh3d(meshes.add(Cylinder::new(0.6, 0.02))),
+        Hole {
+            radius: layout.hole_radius,
+        },
+        Mesh3d(meshes.add(Cylinder::new(layout.hole_radius, 0.02))),
         MeshMaterial3d(materials.add(Color::srgb(0.05, 0.05, 0.05))),
-        Transform::from_translation(hole_pos),
+        Transform::from_translation(layout.hole_pos),
     ));
 
     // Four walls just inside the edges of the 20x20 ground (half-extent 10).
